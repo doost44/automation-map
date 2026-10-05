@@ -19,7 +19,8 @@ then open http://localhost:8000. (Opening `index.html` directly from disk won't 
 | Key | Action |
 | --- | --- |
 | Click | Enter (locks the mouse) |
-| WASD / mouse | Walk and look |
+| WASD / mouse | Walk and look (you can also steer a little in the air) |
+| Space | Jump. Orbs are solid: you can land on top of one and ride it as it orbits |
 | Click on an orb | Grab it; click again to let go. It starts orbiting from where you left it. Swipe the mouse as you let go to throw it; orbs bounce off each other |
 | Mouse wheel (while holding) | Pull the orb closer or push it away |
 | Right click or G (near a rock) | Pick up any rock or pebble; right click or G again throws it at the crosshair. Hit an orb to knock it away, hit a panel to crack its screen. Rocks thrown off the island are gone until you reload |

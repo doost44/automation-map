@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PLATFORM_RADIUS } from './world.js';
+import { PLATFORM_RADIUS, vertexKey } from './world.js';
 import { canvas, crunchy, rng } from './textures.js';
 import { settings } from './options.js';
 
@@ -217,7 +217,7 @@ function jaggedRock(radius) {
   const r = rng(13);
   const offsets = new Map(); // same offset for shared corners, so the faces stay closed
   for (let i = 0; i < pos.count; i++) {
-    const key = `${pos.getX(i).toFixed(2)},${pos.getY(i).toFixed(2)},${pos.getZ(i).toFixed(2)}`;
+    const key = vertexKey(pos.getX(i), pos.getY(i), pos.getZ(i));
     if (!offsets.has(key)) offsets.set(key, 0.8 + r() * 0.4);
     const s = offsets.get(key);
     pos.setXYZ(i, pos.getX(i) * s, pos.getY(i) * s, pos.getZ(i) * s);

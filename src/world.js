@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { grassTexture, dirtTexture, skyTexture, rng } from './textures.js';
 
 export const PLATFORM_RADIUS = 8;
+const SIDES = 16; // the grass top and rock underside must match so their edges meet
+
+// Key for a vertex position. Rounded so duplicated seam vertices match, and +0 so
+// that -0 and 0 give the same key (cos/sin at the seam can come out as -0.00).
+export const vertexKey = (x, y, z) => [x, y, z].map((v) => Math.round(v * 100) + 0).join(',');
 
 export function buildWorld(scene) {
   scene.background = skyTexture();
@@ -17,7 +22,7 @@ export function buildWorld(scene) {
 
   // Grass top: a low cylinder, flat shaded.
   const top = new THREE.Mesh(
-    new THREE.CylinderGeometry(PLATFORM_RADIUS, PLATFORM_RADIUS * 0.96, 0.6, 16),
+    new THREE.CylinderGeometry(PLATFORM_RADIUS, PLATFORM_RADIUS * 0.96, 0.6, SIDES),
     [
       new THREE.MeshLambertMaterial({ map: dirtTexture(), flatShading: true }),
       new THREE.MeshLambertMaterial({ map: grassTexture() }),
@@ -28,14 +33,14 @@ export function buildWorld(scene) {
   platform.add(top);
 
   // Jagged rock underside: a cone with its vertices pushed around.
-  const coneGeo = new THREE.ConeGeometry(PLATFORM_RADIUS * 0.96, 9, 14, 4);
+  const coneGeo = new THREE.ConeGeometry(PLATFORM_RADIUS * 0.96, 9, SIDES, 4);
   coneGeo.rotateX(Math.PI);
   const pos = coneGeo.attributes.position;
   const jitter = new Map(); // same offset for duplicated seam vertices, so no cracks
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     if (y > 4.4) continue; // keep the rim flush with the grass
-    const key = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}`;
+    const key = vertexKey(x, y, z);
     if (!jitter.has(key)) jitter.set(key, [0.8 + r() * 0.4, (r() - 0.5) * 1.2]);
     const [s, dy] = jitter.get(key);
     pos.setXYZ(i, x * s, y + dy, z * s);

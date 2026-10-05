@@ -9,6 +9,7 @@ import { createRocks } from './rocks.js';
 import { createPlayer, START } from './player.js';
 import { createDoom } from './doom.js';
 import { createOptions } from './options.js';
+import { steadyMouse } from './mouse.js';
 import { setSubtitle, showTotals, showError } from './hud.js';
 import { capturePNG } from './capture.js';
 
@@ -32,8 +33,12 @@ chair.rotation.y = 0.3;
 scene.add(chair);
 
 const controls = new PointerLockControls(camera, document.body);
+steadyMouse(controls);
 overlay.addEventListener('click', () => controls.lock());
-controls.addEventListener('lock', () => overlay.classList.add('hidden'));
+controls.addEventListener('lock', () => {
+  overlay.classList.add('hidden');
+  document.activeElement?.blur(); // so Space (jump) doesn't press a menu button
+});
 controls.addEventListener('unlock', () => {
   interaction?.release();
   if (!overview.on && !options.isOpen) overlay.classList.remove('hidden');
@@ -90,6 +95,7 @@ try {
   interaction = createInteraction(camera, controls, orbs, panels);
   rocks = createRocks(scene, camera, controls, orbs, panels);
   doom = createDoom(scene, camera, rocks, player);
+  player.orbs = orbs;
   setSubtitle(data);
   showTotals(data.systems);
 } catch (err) {
@@ -118,4 +124,4 @@ renderer.setAnimationLoop(() => {
 });
 
 // Handy for debugging in the browser console.
-window.automationMap = { scene, camera, orbs, panels, rocks, player, doom, toggleOverview };
+window.automationMap = { scene, camera, controls, keys, orbs, panels, rocks, player, doom, toggleOverview };

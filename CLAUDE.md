@@ -5,7 +5,7 @@ A first-person 3D map of the automated systems in Charlie's daily life, for a de
 ## Stack (do not change)
 - Plain JavaScript ES modules + Three.js 0.160.0 from jsDelivr via an import map in `index.html`.
 - No bundler, no npm, no TypeScript, no frameworks. Runs from any static server and on GitHub Pages (relative paths only).
-- `src/`: `main.js` (loop), `world.js`, `chair.js`, `orbs.js`, `panels.js`, `logos.js` (low-poly logo builders), `interaction.js`, `rocks.js`, `player.js` (walking, falling, respawn), `doom.js` (the all-rocks-gone event), `options.js`, `hud.js`, `capture.js`, `textures.js`. Data in `data/log.json`.
+- `src/`: `main.js` (loop), `world.js`, `chair.js`, `orbs.js`, `panels.js`, `logos.js` (low-poly logo builders), `interaction.js`, `rocks.js`, `player.js` (walking, falling, respawn), `doom.js` (the all-rocks-gone event), `options.js`, `mouse.js` (filters bogus pointer-lock jumps), `hud.js`, `capture.js`, `textures.js`. Data in `data/log.json`.
 
 ## Look
 Early-2000s PC shooter (Half-Life 1 era), not realism.
@@ -22,6 +22,8 @@ Early-2000s PC shooter (Half-Life 1 era), not realism.
 - Click grabs an orb, mouse wheel pulls it in or pushes it away, click again lets go. Orbs always orbit: on release (or when a loose orb slows down) a new orbit is taken from its current position (`settle` in orbs.js). Swiping while letting go throws it with its held velocity; loose orbs glide with drag, bounce off each other (collision spheres, heavier = bigger) and off soft walls. Rock hits use the same velocities. Reload restores the layout.
 - While holding, F / right arrow / trackpad swipe right brings its panel to the middle of the view to read; F / left arrow / swipe left goes back.
 - Right click or G picks up any rock or pebble on the platform (`rocks.js`) and throws it along the crosshair. Orbs get knocked back and flash; panels crack (cracks persist), shake and glitch. Rocks that leave the platform are gone until reload.
+- Orbs are solid to the player (`player.js`): you can land on top of one and ride it (eye height follows its sphere top), walk off its edge, and walking or flying into one pushes you round it. Grabbing the orb you stand on drops you off it.
+- Space jumps. Walking speed carries over when you step or jump off the edge, and WASD steers a little in the air (not while dropping back in, nor for 1.5 s after the giant rock knocks you).
 - No edge clamp, no fades: walking or being knocked off the edge drops the player into the void; once fog hides everything they are moved the same distance above the island and keep falling, slowing to a soft landing with a knee dip (`player.js`). Panels ignore fog, so they fade out by distance instead.
 - When every rock is gone (`doom.js`): sky goes black, a red aura grows overhead, a giant rock crashes onto the platform and knocks the player off. At the wrap (out of sight) rocks reset and the sky eases back to dusk during the descent.
 - O (or the OPTIONS button on the start screen) opens `options.js`: FOV, mouse sensitivity, pixel ratio, fullscreen, HUD and screen shake. Saved to localStorage; other modules read the exported `settings`.

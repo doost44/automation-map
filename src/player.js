@@ -11,6 +11,9 @@ const LAND = new THREE.Vector2(2.6, 2.2); // where a wrapped fall comes down: op
 const SOFT_FALL = 12; // fall speed just before touching down
 const DIP = 0.45; // how far the camera sinks on a hard landing
 const DIP_TIME = 0.4;
+const JUMP = 7.5; // upward speed of a jump (about 1.4 units high)
+const AIR_CONTROL = 5; // how quickly WASD steers you in the air
+const BODY = 0.35; // player radius, for bumping into orbs
 
 // Walking, falling off the edge, and coming back without a cut: below the
 // fog line the player is moved to the same height above the island and keeps
@@ -20,8 +23,11 @@ export function createPlayer(camera, controls, keys) {
   const move = new THREE.Vector3();
   let dip = 1; // landing dip progress, 0..1 (1 = standing)
   let dipDepth = 0;
+  let stunned = 0; // seconds of no air control after being knocked
   const player = {
     grounded: true,
+    on: null, // the orb being stood on, if any
+    orbs: [], // set by main.js once the orbs exist
     wrapped: false, // falling back in from above
     depth: WRAP, // how far to fall before wrapping (the giant rock makes it longer)
     onWrap: null, // called at the moment of the wrap, while nothing is visible
@@ -34,6 +40,8 @@ export function createPlayer(camera, controls, keys) {
     vel.set(dir.x, 0, dir.z).normalize().multiplyScalar(speed);
     vel.y = up;
     player.grounded = false;
+    player.on = null;
+    stunned = 1.5;
   }
 
   function wrap(p) {
@@ -44,53 +52,132 @@ export function createPlayer(camera, controls, keys) {
     player.onWrap?.();
   }
 
-  function land(p) {
+  const lastOrbPos = new THREE.Vector3();
+
+  function land(p, eyeY, orb = null) {
     dipDepth = DIP * Math.min(1, -vel.y / SOFT_FALL);
     dip = dipDepth > 0.05 ? 0 : 1;
-    p.y = EYE;
+    p.y = eyeY;
     vel.set(0, 0, 0);
     player.grounded = true;
     player.wrapped = false;
+    player.on = orb;
+    if (orb) lastOrbPos.copy(orb.group.position);
+  }
+
+  // Eye height when standing on top of an orb at the player's spot, or null if off its top.
+  function orbTop(o, p) {
+    const c = o.group.position;
+    const h = Math.hypot(p.x - c.x, p.z - c.z);
+    if (h > o.radius * 0.9) return null;
+    return c.y + Math.sqrt(o.radius ** 2 - h * h) + EYE;
+  }
+
+  // Orbs are solid: walking or flying into one pushes you round it.
+  function bump(p) {
+    for (const o of player.orbs) {
+      if (o === player.on || o.held) continue;
+      const c = o.group.position;
+      const feet = p.y - EYE;
+      if (feet >= c.y + o.radius * 0.8) continue; // above it: landing handles that
+      const dx = p.x - c.x, dz = p.z - c.z;
+      const dy = THREE.MathUtils.clamp(c.y, feet, p.y) - c.y; // nearest point of the body to the centre
+      const d = Math.hypot(dx, dy, dz);
+      const min = o.radius + BODY;
+      const flat = Math.hypot(dx, dz);
+      if (d >= min || flat < 1e-3) continue;
+      const out = (min - d) / flat;
+      p.x += dx * out;
+      p.z += dz * out;
+    }
+  }
+
+  // WASD as a direction on the ground plane, relative to where the camera faces.
+  const forward = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  function wishDir() {
+    move.set(0, 0, 0);
+    if (!controls.isLocked) return move;
+    camera.getWorldDirection(forward);
+    forward.y = 0;
+    forward.normalize();
+    right.crossVectors(forward, camera.up);
+    move.addScaledVector(forward, (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0));
+    move.addScaledVector(right, (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0));
+    return move.lengthSq() > 0 ? move.normalize() : move;
   }
 
   function update(dt) {
     const p = camera.position;
+    const wish = wishDir();
 
     if (player.grounded) {
-      if (controls.isLocked) {
-        move.set(
-          (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0),
-          0,
-          (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0),
-        );
-        if (move.lengthSq() > 0) {
-          move.normalize().multiplyScalar(SPEED * dt);
-          controls.moveRight(move.x);
-          controls.moveForward(move.z);
-        }
+      // Ride along with the orb underneath.
+      const orb = player.on;
+      if (orb?.held) {
+        // Grabbed the orb you were standing on: drop off it.
+        player.grounded = false;
+        player.on = null;
+        return;
+      }
+      if (orb) {
+        p.add(orb.group.position).sub(lastOrbPos);
+        lastOrbPos.copy(orb.group.position);
+      }
+      // Walking speed is kept in vel, so stepping or jumping off an edge carries you out.
+      vel.set(wish.x * SPEED, 0, wish.z * SPEED);
+      p.addScaledVector(vel, dt);
+      bump(p);
+
+      const ground = orb ? orbTop(orb, p) : EYE;
+      if (ground === null) {
+        player.grounded = false; // walked off the orb
+        player.on = null;
+        return;
       }
       // Knees bend and straighten after a landing.
-      if (dip < 1) {
-        dip = Math.min(1, dip + dt / DIP_TIME);
-        p.y = EYE - dipDepth * Math.sin(dip * Math.PI);
+      if (dip < 1) dip = Math.min(1, dip + dt / DIP_TIME);
+      p.y = ground - dipDepth * Math.sin(dip * Math.PI);
+
+      if (keys.Space && controls.isLocked) {
+        vel.y = JUMP;
+        p.y = ground;
+        dip = 1;
+        player.grounded = false;
+        player.on = null;
+      } else if (!orb && Math.hypot(p.x, p.z) > PLATFORM_RADIUS) {
+        player.grounded = false; // walked off the edge
       }
-      // Walked off the edge.
-      if (Math.hypot(p.x, p.z) > PLATFORM_RADIUS) player.grounded = false;
       return;
     }
 
-    // In the air: gravity, no steering.
-    const wasAbove = p.y >= EYE;
+    // In the air: gravity, plus some steering (not while dropping back in from above).
+    const prevY = p.y;
     vel.y = Math.max(vel.y - GRAVITY * dt, -MAX_FALL);
+    stunned = Math.max(0, stunned - dt);
+    if (!player.wrapped && stunned === 0) {
+      const k = Math.min(1, AIR_CONTROL * dt);
+      vel.x += (wish.x * SPEED - vel.x) * k * wish.lengthSq();
+      vel.z += (wish.z * SPEED - vel.z) * k * wish.lengthSq();
+    }
     // Coming back in: slow down near the ground, like a soft parachute.
     if (player.wrapped) {
       const near = THREE.MathUtils.clamp((p.y - EYE) / 40, 0, 1);
       vel.y = Math.max(vel.y, -THREE.MathUtils.lerp(SOFT_FALL, MAX_FALL, near));
     }
     p.addScaledVector(vel, dt);
+    bump(p);
 
-    const over = Math.hypot(p.x, p.z) < PLATFORM_RADIUS;
-    if (over && wasAbove && p.y <= EYE) return land(p);
+    if (vel.y <= 0) {
+      // Land on the island...
+      if (Math.hypot(p.x, p.z) < PLATFORM_RADIUS && prevY >= EYE && p.y <= EYE) return land(p, EYE);
+      // ...or on top of an orb (a little leeway, since orbs bob up to meet you).
+      for (const o of player.orbs) {
+        if (o.held) continue;
+        const top = orbTop(o, p);
+        if (top !== null && p.y <= top && prevY >= top - 0.6) return land(p, top, o);
+      }
+    }
     if (p.y < -player.depth) wrap(p);
   }
 
