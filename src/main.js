@@ -10,6 +10,7 @@ import { createPlayer, START } from './player.js';
 import { createDoom } from './doom.js';
 import { createOptions } from './options.js';
 import { steadyMouse } from './mouse.js';
+import { startSound, updateSound } from './sound.js';
 import { setSubtitle, showTotals, showError } from './hud.js';
 import { capturePNG } from './capture.js';
 
@@ -34,7 +35,11 @@ scene.add(chair);
 
 const controls = new PointerLockControls(camera, document.body);
 steadyMouse(controls);
-overlay.addEventListener('click', () => controls.lock());
+overlay.addEventListener('click', () => {
+  options.restoreFullscreen();
+  startSound(); // browsers only allow audio to start from a click
+  controls.lock();
+});
 controls.addEventListener('lock', () => {
   overlay.classList.add('hidden');
   document.activeElement?.blur(); // so Space (jump) doesn't press a menu button
@@ -105,6 +110,8 @@ try {
 }
 
 addEventListener('keydown', (e) => {
+  // With Esc taken over in fullscreen (see options.js), a tap still frees the mouse.
+  if (e.code === 'Escape' && controls.isLocked) controls.unlock();
   if (e.code === 'KeyC') toggleOverview();
   if (e.code === 'KeyR') resetOrbs();
   if (e.code === 'KeyE') player.toggleSit();
@@ -130,6 +137,7 @@ renderer.setAnimationLoop(() => {
   updatePanels(panels, camera, dt);
   rocks?.update(dt);
   doom?.update(dt, t);
+  updateSound(dt, camera, orbs);
   renderer.render(scene, camera);
 });
 

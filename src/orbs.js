@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { wordTexture, rng } from './textures.js';
 import { buildLogo } from './logos.js';
+import { sfx } from './sound.js';
 
 // Retro palette, one colour per category.
 export const CATEGORY_COLORS = {
@@ -233,6 +234,12 @@ function collide(orbs) {
       const impulse = (-(1 + BOUNCE) * Math.min(closing, -1.5)) / (ia + ib);
       a.vel.addScaledVector(_n, -impulse * ia);
       b.vel.addScaledVector(_n, impulse * ib);
+      // Bonk on a real hit, at most a few times a second per orb.
+      const now = performance.now();
+      if (closing < -1.5 && now - (a.bonkAt ?? 0) > 150 && now - (b.bonkAt ?? 0) > 150) {
+        sfx.bonk((a.radius + b.radius) / 2, -closing, i, j);
+        a.bonkAt = b.bonkAt = now;
+      }
       a.wobble = Math.max(a.wobble, 0.4);
       b.wobble = Math.max(b.wobble, 0.4);
     }

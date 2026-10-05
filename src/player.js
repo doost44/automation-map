@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PLATFORM_RADIUS } from './world.js';
 import { showHint } from './hud.js';
+import { sfx, loopsLevel } from './sound.js';
 
 export const EYE = 1.7;
 export const START = new THREE.Vector3(1.4, EYE, 1.2);
@@ -29,6 +30,7 @@ export function createPlayer(camera, controls, keys) {
   let dip = 1; // landing dip progress, 0..1 (1 = standing)
   let dipDepth = 0;
   let stunned = 0; // seconds of no air control after being knocked
+  let stepTimer = 0;
   const player = {
     grounded: true,
     on: null, // the orb being stood on, if any
@@ -66,6 +68,7 @@ export function createPlayer(camera, controls, keys) {
   const lastOrbPos = new THREE.Vector3();
 
   function land(p, eyeY, orb = null) {
+    sfx.land(-vel.y / 25);
     dipDepth = DIP * Math.min(1, -vel.y / SOFT_FALL);
     dip = dipDepth > 0.05 ? 0 : 1;
     p.y = eyeY;
@@ -142,10 +145,12 @@ export function createPlayer(camera, controls, keys) {
     if (!lookingAtChair()) return;
     player.seated = true;
     vel.set(0, 0, 0);
+    sfx.creak();
     startMove(player.chair.localToWorld(new THREE.Vector3(0, 0.47, 0.02)).add(SEATED_EYE), true);
   };
 
   function standUp() {
+    sfx.creak();
     player.seated = false;
     player.standing = true;
     const spot = player.chair.localToWorld(new THREE.Vector3(0, 0, 1.0));
@@ -186,6 +191,7 @@ export function createPlayer(camera, controls, keys) {
   }
 
   function update(dt) {
+    if (player.grounded || player.seated) loopsLevel.wind(0);
     if (updateSit(dt)) return showHint(player.seated ? 'SEATED · E, WASD OR SPACE TO STAND' : null, 'chair');
     showHint(lookingAtChair() ? 'CHAIR · E TO SIT' : null, 'chair');
     const p = camera.position;
@@ -207,6 +213,9 @@ export function createPlayer(camera, controls, keys) {
       // Walking speed is kept in vel, so stepping or jumping off an edge carries you out.
       vel.set(wish.x * SPEED, 0, wish.z * SPEED);
       p.addScaledVector(vel, dt);
+      // Footsteps while walking.
+      stepTimer -= dt;
+      if (wish.lengthSq() > 0 && stepTimer <= 0) { sfx.step(); stepTimer = 0.42; }
       bump(p);
 
       const ground = orb ? orbTop(orb, p) : EYE;
@@ -220,6 +229,7 @@ export function createPlayer(camera, controls, keys) {
       p.y = ground - dipDepth * Math.sin(dip * Math.PI);
 
       if (keys.Space && controls.isLocked) {
+        sfx.jump();
         vel.y = JUMP;
         p.y = ground;
         dip = 1;
@@ -247,6 +257,7 @@ export function createPlayer(camera, controls, keys) {
     }
     p.addScaledVector(vel, dt);
     bump(p);
+    loopsLevel.wind(Math.min(1, Math.max(0, -vel.y - 4) / 30)); // wind builds as you fall faster
 
     if (vel.y <= 0) {
       // Land on the island...

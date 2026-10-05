@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PLATFORM_RADIUS, vertexKey } from './world.js';
 import { canvas, crunchy, rng } from './textures.js';
 import { settings } from './options.js';
+import { sfx, loopsLevel } from './sound.js';
 
 // What happens when the last rock is thrown off the island:
 // the sky goes black, a red aura opens overhead, a giant rock crashes down and
@@ -73,6 +74,7 @@ export function createDoom(scene, camera, rocks, player) {
   };
 
   function setDarkness(k) {
+    loopsLevel.rumble(k * 0.8);
     dome.visible = k > 0;
     dome.material.opacity = k * 0.94;
     scene.fog.color.copy(base.fog).lerp(DOOM_FOG, k);
@@ -83,6 +85,7 @@ export function createDoom(scene, camera, rocks, player) {
 
   function impact() {
     state = 'fallen';
+    sfx.boom();
     giant.position.y = BIG * 0.7;
     shake = 1;
     aura.scale.multiplyScalar(1.3);
@@ -148,6 +151,7 @@ export function createDoom(scene, camera, rocks, player) {
       setDarkness(Math.min(1, t / DARKEN));
       const grow = THREE.MathUtils.clamp((t - AURA_START) / (DROP_AT - AURA_START), 0, 1);
       aura.visible = grow > 0;
+      loopsLevel.drone(grow);
       if (state !== 'fallen') aura.scale.setScalar(80 * grow * (1 + 0.06 * Math.sin(time * 6)));
       if (state === 'dark' && t >= DROP_AT) {
         state = 'falling';
@@ -160,6 +164,7 @@ export function createDoom(scene, camera, rocks, player) {
       setDarkness(k);
       aura.scale.multiplyScalar(Math.pow(0.1, dt));
       aura.material.opacity = k;
+      loopsLevel.drone(aura.visible ? k : 0);
       if (k === 0) {
         state = 'calm';
         aura.visible = false;
@@ -174,6 +179,9 @@ export function createDoom(scene, camera, rocks, player) {
       giant.rotation.z += dt * 0.5;
       if (giant.position.y <= BIG * 0.7) impact();
     }
+    // The boulder whistles as it falls, dropping in pitch as it gets closer.
+    if (state === 'falling') loopsLevel.whistle(1, 300 + (giant.position.y / AURA_Y) * 900);
+    else loopsLevel.whistle(0);
 
     updateDebris(dt);
 

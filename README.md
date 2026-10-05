@@ -26,7 +26,7 @@ then open http://localhost:8000. (Opening `index.html` directly from disk won't 
 | Mouse wheel (while holding) | Pull the orb closer or push it away |
 | Right click or G (near a rock) | Pick up any rock or pebble; right click or G again throws it at the crosshair. Hit an orb to knock it away, hit a panel to crack its screen. Rocks thrown off the island are gone until you reload |
 | F, → or swipe right (while holding) | Bring the orb's panel to the middle of the screen to read it; F, ← or swipe left goes back |
-| O | Options: field of view (60–110), mouse sensitivity, pixel size, fullscreen, HUD on/off, screen shake on/off (saved in your browser) |
+| O | Options: field of view (60–110), mouse sensitivity, volume, music volume (the bass-line wind) and mute, pixel size, fullscreen, HUD on/off, screen shake on/off (saved in your browser). In fullscreen (from this menu), a tap of Esc frees the mouse without leaving fullscreen; hold Esc to leave it |
 | R | Reset orbits: every orb glides back to its original, evenly spaced orbit (also a button in the options menu) |
 | C | Toggle the overview camera |
 | P | Save a 1600×1200 `automation-map.png` |

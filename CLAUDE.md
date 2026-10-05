@@ -3,9 +3,9 @@
 A first-person 3D map of the automated systems in Charlie's daily life, for a design class. Built from a two-week field log of every time a system decided, suggested, sorted, priced, filtered or completed something.
 
 ## Stack (do not change)
-- Plain JavaScript ES modules + Three.js 0.160.0 from jsDelivr via an import map in `index.html`.
+- Plain JavaScript ES modules + Three.js 0.160.0 from jsDelivr via an import map in `index.html`. Assets: only `assets/audio/bassline.m4a`; everything else is generated in code.
 - No bundler, no npm, no TypeScript, no frameworks. Runs from any static server and on GitHub Pages (relative paths only).
-- `src/`: `main.js` (loop), `world.js`, `chair.js`, `orbs.js`, `panels.js`, `logos.js` (low-poly logo builders), `interaction.js`, `rocks.js`, `player.js` (walking, falling, respawn), `doom.js` (the all-rocks-gone event), `options.js`, `mouse.js` (filters bogus pointer-lock jumps), `hud.js`, `capture.js`, `textures.js`. Data in `data/log.json`.
+- `src/`: `main.js` (loop), `world.js`, `chair.js`, `orbs.js`, `panels.js`, `logos.js` (low-poly logo builders), `interaction.js`, `rocks.js`, `player.js` (walking, falling, respawn), `doom.js` (the all-rocks-gone event), `options.js`, `mouse.js` (filters bogus pointer-lock jumps), `sound.js` (all sound, synthesised with Web Audio, no files), `hud.js`, `capture.js`, `textures.js`. Data in `data/log.json`.
 
 ## Look
 Early-2000s PC shooter (Half-Life 1 era), not realism.
@@ -29,7 +29,8 @@ Early-2000s PC shooter (Half-Life 1 era), not realism.
 - Space jumps. Walking speed carries over when you step or jump off the edge, and WASD steers a little in the air (not while dropping back in, nor for 1.5 s after the giant rock knocks you).
 - No edge clamp, no fades: walking or being knocked off the edge drops the player into the void; once fog hides everything they are moved the same distance above the island and keep falling, slowing to a soft landing with a knee dip (`player.js`). Panels ignore fog, so they fade out by distance instead.
 - When every rock is gone (`doom.js`): sky goes black, a red aura grows overhead, a giant rock crashes onto the platform and knocks the player off. At the wrap (out of sight) rocks reset and the sky eases back to dusk during the descent.
-- O (or the OPTIONS button on the start screen) opens `options.js`: FOV, mouse sensitivity, pixel ratio, fullscreen, HUD and screen shake. Saved to localStorage; other modules read the exported `settings`.
+- O (or the OPTIONS button on the start screen) opens `options.js`: FOV, mouse sensitivity, volume, mute, pixel ratio, fullscreen, HUD and screen shake. Fullscreen uses Keyboard Lock on Esc so a tap only frees the mouse (fallback: fullscreen is re-requested on the click back into the game).
+- Sound (`sound.js`): starts on the click into the game. Effects are synthesised (oscillators + filtered noise): grass footsteps (rustle, crunch ticks, heel thump), jump scuff and whoosh, landing, chair creak, rock sounds, panel crack and static, giant-rock rumble/drone/whistle/boom. Orb sounds are a small two-oscillator synth with a shared echo, using only A-flat major pentatonic (Ab Bb C Eb F, the key of Charlie's ambient track). Each orb has its own voice (`VOICES` in sound.js: waveform, octave, note pattern, speed) used for aim, drop, collisions and chatter; grabbing swells a long ambient synth pad (chord, octave, brightness, detune and swell vary per orb) and a held orb drifts through slow overlapping pad notes. The falling wind is two wandering resonant noise bands (howl and whistle) over an airy rush, gusting via LFOs. The only audio file is `assets/audio/bassline.m4a` (Charlie's own bass line, cut from their track with ffmpeg), looped through a sweeping filter and an HRTF panner that circles the player as a musical wind. `updateSound` sets volume, moves the listener with the camera, drives the wind and plays faint orb chatter (busier for apps with more minutes per day).
 - C = overview camera, P = export a 1600x1200 PNG.
 
 ## Data

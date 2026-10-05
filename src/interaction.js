@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { showTarget } from './hud.js';
 import { releaseOrb } from './orbs.js';
+import { sfx } from './sound.js';
 
 const CENTER = new THREE.Vector2(0, 0);
 const MAX_DIST = 40;
@@ -13,7 +14,10 @@ export function createInteraction(camera, controls, orbs, panels) {
 
   // Reading mode brings the held orb's panel to the middle of the view.
   function setReading(on) {
-    if (state.held) state.held.reading = on;
+    if (!state.held || state.held.reading === on) return;
+    state.held.reading = on;
+    if (on) sfx.readOn();
+    else sfx.readOff();
   }
 
   document.addEventListener('mousedown', (e) => {
@@ -24,6 +28,7 @@ export function createInteraction(camera, controls, orbs, panels) {
       const o = state.targeted;
       o.held = true;
       o.returning = false;
+      sfx.grab(orbs.indexOf(o));
       o.free = false;
       o.heldVel.set(0, 0, 0);
       prev.copy(o.group.position);
@@ -71,6 +76,8 @@ export function createInteraction(camera, controls, orbs, panels) {
       aimed = hit ? hit.object.userData.orb : null;
     }
     for (const o of orbs) o.targeted = o === aimed && !state.held;
+    if (aimed && aimed !== state.lastAimed && !state.held) sfx.aim(orbs.indexOf(aimed));
+    state.lastAimed = aimed;
     state.targeted = aimed;
 
     if (state.held) {
@@ -95,8 +102,12 @@ export function createInteraction(camera, controls, orbs, panels) {
   }
 
   function release() {
-    if (!state.held) return;
-    releaseOrb(state.held);
+    const o = state.held;
+    if (!o) return;
+    releaseOrb(o);
+    sfx.release();
+    if (o.free) sfx.whoosh(o.vel.length(), orbs.indexOf(o));
+    else sfx.drop(orbs.indexOf(o));
     state.held = null;
   }
 

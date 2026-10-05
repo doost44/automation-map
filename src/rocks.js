@@ -3,6 +3,7 @@ import { PLATFORM_RADIUS } from './world.js';
 import { hitOrb } from './orbs.js';
 import { crackPanel } from './panels.js';
 import { showHint } from './hud.js';
+import { sfx } from './sound.js';
 import { rng } from './textures.js';
 
 const ROCKS = 6; // fist-sized rocks near the start
@@ -56,7 +57,7 @@ export function createRocks(scene, camera, controls, orbs, panels) {
   function act() {
     if (!controls.isLocked) return;
     if (held) throwRock(held);
-    else if (aimed) { held = aimed; held.state = 'held'; }
+    else if (aimed) { held = aimed; held.state = 'held'; sfx.pickup(); }
   }
 
   const dir = new THREE.Vector3();
@@ -68,6 +69,7 @@ export function createRocks(scene, camera, controls, orbs, panels) {
     rock.state = 'flying';
     rock.hits.clear();
     held = null;
+    sfx.throwRock();
   }
 
   document.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -90,8 +92,8 @@ export function createRocks(scene, camera, controls, orbs, panels) {
     const hit = raycaster.intersectObjects(hittable, false).find((h) => !rock.hits.has(h.object));
     if (hit) {
       const t = targets.get(hit.object);
-      if (t.orb) hitOrb(t.orb, stepDir);
-      else crackPanel(t.panel, hit.uv);
+      if (t.orb) { hitOrb(t.orb, stepDir); sfx.thunk(); }
+      else { crackPanel(t.panel, hit.uv); sfx.crack(); }
       rock.hits.add(hit.object);
       p.copy(hit.point).addScaledVector(stepDir, -rock.radius);
       rock.vel.multiplyScalar(-0.2);
@@ -108,6 +110,7 @@ export function createRocks(scene, camera, controls, orbs, panels) {
     if (onPlatform && p.y < rest && p.y > -0.5 && rock.vel.y < 0) {
       p.y = rest;
       if (rock.vel.y < -3) {
+        sfx.rockLand();
         rock.vel.y *= -0.2;
         rock.vel.x *= 0.15;
         rock.vel.z *= 0.15;
