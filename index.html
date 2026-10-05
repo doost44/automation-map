@@ -32,7 +32,31 @@
   <div class="box">
     <h1>AUTOMATION MAP</h1>
     <p>CLICK TO ENTER</p>
-    <p class="small">ESC releases the mouse · C overview · P saves a 1600×1200 PNG</p>
+    <button id="options-button" class="btn">OPTIONS</button>
+    <p class="small">ESC releases the mouse · O options · C overview · P saves a 1600×1200 PNG</p>
+  </div>
+</div>
+
+<div id="options" class="hidden">
+  <div class="box">
+    <h2>OPTIONS</h2>
+    <label>FIELD OF VIEW <span id="opt-fov-val"></span>
+      <input id="opt-fov" type="range" min="60" max="110" step="1">
+    </label>
+    <label>MOUSE SENSITIVITY <span id="opt-sens-val"></span>
+      <input id="opt-sens" type="range" min="0.2" max="3" step="0.1">
+    </label>
+    <label>PIXEL SIZE
+      <select id="opt-pixel"></select>
+    </label>
+    <label class="check"><input id="opt-hud" type="checkbox"> SHOW HUD</label>
+    <label class="check"><input id="opt-shake" type="checkbox"> SCREEN SHAKE</label>
+    <div class="row">
+      <button id="opt-full" class="btn"></button>
+      <button id="opt-reset" class="btn">RESET</button>
+      <button id="opt-close" class="btn">BACK</button>
+    </div>
+    <p class="small">O or ESC closes this menu</p>
   </div>
 </div>
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PLATFORM_RADIUS } from './world.js';
 import { canvas, crunchy, rng } from './textures.js';
+import { settings } from './options.js';
 
 // What happens when the last rock is thrown off the island:
 // the sky goes black, a red aura opens overhead, a giant rock crashes down and
@@ -177,7 +178,7 @@ export function createDoom(scene, camera, rocks, player) {
     updateDebris(dt);
 
     // Screen shake on the canvas itself, so it doesn't fight mouse look.
-    if (shake > 0.01) {
+    if (shake > 0.01 && settings.shake) {
       shake *= Math.pow(0.03, dt);
       const s = shake * 24;
       view.style.transform = `translate(${(Math.random() - 0.5) * s}px, ${(Math.random() - 0.5) * s}px)`;

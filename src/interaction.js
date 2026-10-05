@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { showTarget } from './hud.js';
+import { releaseOrb } from './orbs.js';
 
 const CENTER = new THREE.Vector2(0, 0);
 const MAX_DIST = 40;
@@ -23,6 +24,9 @@ export function createInteraction(camera, controls, orbs, panels) {
       const o = state.targeted;
       o.held = true;
       o.returning = false;
+      o.free = false;
+      o.heldVel.set(0, 0, 0);
+      prev.copy(o.group.position);
       state.held = o;
       state.dist = state.wantDist = camera.position.distanceTo(o.group.position);
     }
@@ -55,6 +59,8 @@ export function createInteraction(camera, controls, orbs, panels) {
   const dir = new THREE.Vector3();
   const side = new THREE.Vector3();
   const goal = new THREE.Vector3();
+  const prev = new THREE.Vector3();
+  const step = new THREE.Vector3();
 
   function update(dt) {
     // Aim with the crosshair (screen centre), which works under pointer lock.
@@ -78,23 +84,19 @@ export function createInteraction(camera, controls, orbs, panels) {
         goal.addScaledVector(side, -(o.radius + 3.5));
       }
       o.group.position.lerp(goal, Math.min(1, dt * 10));
+      // Average speed over roughly the last tenth of a second, for throwing on release.
+      if (dt > 0) {
+        step.subVectors(o.group.position, prev).divideScalar(dt);
+        o.heldVel.lerp(step, 1 - Math.exp(-dt / 0.1));
+      }
+      prev.copy(o.group.position);
     }
     showTarget(state.held ?? aimed, !!state.held);
   }
 
-  // Let go: the drop point becomes the orb's new home and it stops orbiting, so it
-  // stays where it was put (still spinning and bobbing). returning smooths the bob offset.
   function release() {
-    const o = state.held;
-    if (!o) return;
-    const p = o.group.position;
-    o.orbitRadius = Math.hypot(p.x, p.z);
-    o.angle = Math.atan2(p.z, p.x);
-    o.height = p.y;
-    o.orbitSpeed = 0;
-    o.held = false;
-    o.reading = false;
-    o.returning = true;
+    if (!state.held) return;
+    releaseOrb(state.held);
     state.held = null;
   }
 

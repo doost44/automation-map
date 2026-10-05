@@ -147,7 +147,9 @@ const _side = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 const _dir = new THREE.Vector3();
 const _front = new THREE.Vector3();
-const READ_DIST = 4.6; // close enough that the 6 x 4.5 panel fills most of the view
+// Reading distance at which the 4.5-tall panel fills 70% of the view height (the
+// overlay in style.css uses the same 70%), for whatever field of view is set.
+const readDist = (camera) => 4.5 / (0.7 * 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
 
 export function updatePanels(panels, camera, dt) {
   let reading = null;
@@ -166,7 +168,7 @@ export function updatePanels(panels, camera, dt) {
     p.read += ((o.reading ? 1 : 0) - p.read) * Math.min(1, dt * 7);
     if (p.read > 0.001) {
       camera.getWorldDirection(_dir);
-      _front.copy(camera.position).addScaledVector(_dir, READ_DIST);
+      _front.copy(camera.position).addScaledVector(_dir, readDist(camera));
       p.mesh.position.lerp(_front, p.read);
       p.mesh.quaternion.slerp(camera.quaternion, p.read);
     }

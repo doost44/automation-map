@@ -20,10 +20,11 @@ then open http://localhost:8000. (Opening `index.html` directly from disk won't 
 | --- | --- |
 | Click | Enter (locks the mouse) |
 | WASD / mouse | Walk and look |
-| Click on an orb | Grab it; click again to drop it there (it stays where you leave it until you reload) |
+| Click on an orb | Grab it; click again to let go. It starts orbiting from where you left it. Swipe the mouse as you let go to throw it; orbs bounce off each other |
 | Mouse wheel (while holding) | Pull the orb closer or push it away |
 | Right click or G (near a rock) | Pick up any rock or pebble; right click or G again throws it at the crosshair. Hit an orb to knock it away, hit a panel to crack its screen. Rocks thrown off the island are gone until you reload |
 | F, → or swipe right (while holding) | Bring the orb's panel to the middle of the screen to read it; F, ← or swipe left goes back |
+| O | Options: field of view (60–110), mouse sensitivity, pixel size, fullscreen, HUD on/off, screen shake on/off (saved in your browser) |
 | C | Toggle the overview camera |
 | P | Save a 1600×1200 `automation-map.png` |
 | Esc | Release the mouse |

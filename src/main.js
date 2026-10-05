@@ -8,6 +8,7 @@ import { createInteraction } from './interaction.js';
 import { createRocks } from './rocks.js';
 import { createPlayer, START } from './player.js';
 import { createDoom } from './doom.js';
+import { createOptions } from './options.js';
 import { setSubtitle, showTotals, showError } from './hud.js';
 import { capturePNG } from './capture.js';
 
@@ -17,7 +18,7 @@ const canvas = document.getElementById('view');
 const overlay = document.getElementById('overlay');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-renderer.setPixelRatio(0.5); // half internal resolution, upscaled pixelated by CSS
+renderer.setPixelRatio(0.5); // half internal resolution, upscaled pixelated by CSS (changeable in options)
 renderer.setSize(innerWidth, innerHeight, false);
 
 const scene = new THREE.Scene();
@@ -35,7 +36,17 @@ overlay.addEventListener('click', () => controls.lock());
 controls.addEventListener('lock', () => overlay.classList.add('hidden'));
 controls.addEventListener('unlock', () => {
   interaction?.release();
-  if (!overview.on) overlay.classList.remove('hidden');
+  if (!overview.on && !options.isOpen) overlay.classList.remove('hidden');
+});
+
+const options = createOptions({
+  renderer, camera, controls,
+  onOpen: () => overlay.classList.add('hidden'),
+  onClose: () => { if (!overview.on) overlay.classList.remove('hidden'); },
+});
+document.getElementById('options-button').addEventListener('click', (e) => {
+  e.stopPropagation(); // don't also enter the game
+  options.open();
 });
 
 const keys = {};

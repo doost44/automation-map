@@ -112,9 +112,9 @@ export function buildOrbs(scene, systems) {
       held: false,
       returning: false,
       targeted: false,
-      kick: new THREE.Vector3(), // knockback velocity from a rock
-      knock: new THREE.Vector3(), // current knockback offset
-      knockApplied: new THREE.Vector3(), // offset added to the position last frame
+      free: false, // flying loose after a fling, bump or rock hit
+      vel: new THREE.Vector3(), // velocity while free
+      heldVel: new THREE.Vector3(), // how fast it moves while held (set by interaction.js)
       wobble: 0,
       flash: 0,
     };
@@ -126,30 +126,105 @@ export function buildOrbs(scene, systems) {
   return { orbs, lines };
 }
 
+const DRAG = 0.3; // fraction of speed kept per second while flying loose
+const SETTLE_SPEED = 0.6;
+const BOUNCE = 0.8;
+const SIZE = 1.15; // collision radius, relative to the orb radius
+
+// Cut an orb loose from its orbit, moving at its current orbit speed.
+function makeFree(o) {
+  if (o.free || o.held) return;
+  o.free = true;
+  o.returning = false;
+  const r = o.orbitRadius;
+  o.vel.set(-Math.sin(o.angle) * r, 0, Math.cos(o.angle) * r).multiplyScalar(o.orbitSpeed);
+}
+
+// Pick up orbiting again from wherever the orb is now, at its usual speed.
+export function settle(o) {
+  const p = o.group.position;
+  o.orbitRadius = Math.hypot(p.x, p.z);
+  o.angle = Math.atan2(p.z, p.x);
+  o.height = p.y;
+  o.free = false;
+  o.vel.set(0, 0, 0);
+  o.returning = true; // smooths over the small bob offset
+}
+
+// Let go of a held orb: a quick swipe throws it, otherwise it just starts orbiting there.
+export function releaseOrb(o) {
+  o.held = false;
+  o.reading = false;
+  if (o.heldVel.length() > 2) {
+    o.free = true;
+    o.vel.copy(o.heldVel).multiplyScalar(1.3).clampLength(0, 40);
+  } else {
+    settle(o);
+  }
+}
+
 // A rock hit: shove the orb along the throw, squash it and flash it white.
 export function hitOrb(orb, dir) {
-  orb.kick.copy(dir).multiplyScalar(orb.held ? 4 : 18);
+  makeFree(orb);
+  if (!orb.held) orb.vel.addScaledVector(dir, 12);
   orb.wobble = 1;
   orb.flash = 1;
 }
 
-const WHITE = new THREE.Color(0xffffff);
-const ZERO = new THREE.Vector3();
+function fly(o, dt) {
+  const p = o.group.position;
+  p.addScaledVector(o.vel, dt);
+  o.vel.multiplyScalar(Math.pow(DRAG, dt));
+  // Soft walls: stay above the island and inside the sky.
+  if (p.y < o.radius + 1 && o.vel.y < 0) o.vel.y *= -BOUNCE;
+  if (p.y > 40 && o.vel.y > 0) o.vel.y *= -BOUNCE;
+  const out = Math.hypot(p.x, p.z);
+  if (out > 70) {
+    const nx = p.x / out, nz = p.z / out;
+    const along = o.vel.x * nx + o.vel.z * nz;
+    if (along > 0) { o.vel.x -= 2 * along * nx; o.vel.z -= 2 * along * nz; }
+  }
+  if (o.vel.length() < SETTLE_SPEED) settle(o);
+}
 
-// Knockback is an offset on top of the orbit that drifts out, then springs back.
-function updateHit(o, t, dt) {
-  if (o.kick.lengthSq() > 1e-4 || o.knock.lengthSq() > 1e-4) {
-    o.knock.addScaledVector(o.kick, dt).multiplyScalar(Math.pow(0.2, dt));
-    o.kick.multiplyScalar(Math.pow(0.03, dt));
-    // A held orb just gets shoved; interaction.js pulls it back to the hand.
-    if (o.held) {
-      o.group.position.addScaledVector(o.kick, dt);
-      o.knock.set(0, 0, 0);
-    } else {
-      o.group.position.add(o.knock);
+// Orbs bounce off each other like balls; bigger ones are heavier. Held orbs push but don't budge.
+const _n = new THREE.Vector3();
+const _va = new THREE.Vector3();
+const _vb = new THREE.Vector3();
+function collide(orbs) {
+  for (let i = 0; i < orbs.length; i++) {
+    for (let j = i + 1; j < orbs.length; j++) {
+      const a = orbs[i], b = orbs[j];
+      if (a.held && b.held) continue;
+      _n.subVectors(b.group.position, a.group.position);
+      const dist = _n.length();
+      const min = (a.radius + b.radius) * SIZE;
+      if (dist >= min || dist < 1e-4) continue;
+      _n.divideScalar(dist);
+      makeFree(a);
+      makeFree(b);
+      const ia = a.held ? 0 : 1 / a.radius ** 3; // inverse mass
+      const ib = b.held ? 0 : 1 / b.radius ** 3;
+      // Push apart so they no longer overlap.
+      const push = (min - dist) / (ia + ib);
+      a.group.position.addScaledVector(_n, -push * ia);
+      b.group.position.addScaledVector(_n, push * ib);
+      // Bounce: swap momentum along the line between them.
+      _va.copy(a.held ? a.heldVel : a.vel);
+      _vb.copy(b.held ? b.heldVel : b.vel);
+      const closing = _vb.sub(_va).dot(_n);
+      const impulse = (-(1 + BOUNCE) * Math.min(closing, -1.5)) / (ia + ib);
+      a.vel.addScaledVector(_n, -impulse * ia);
+      b.vel.addScaledVector(_n, impulse * ib);
+      a.wobble = Math.max(a.wobble, 0.4);
+      b.wobble = Math.max(b.wobble, 0.4);
     }
   }
-  o.knockApplied.copy(o.held ? ZERO : o.knock);
+}
+
+const WHITE = new THREE.Color(0xffffff);
+
+function updateHit(o, t, dt) {
   if (o.wobble > 0.01) {
     o.wobble *= Math.pow(0.04, dt);
     const s = 1 + 0.35 * o.wobble * Math.sin(t * 30);
@@ -210,9 +285,10 @@ export function updateOrbs(orbs, lines, t, dt) {
       o.height + Math.sin(t * 0.8 + o.bobPhase) * 0.5,
       Math.sin(o.angle) * o.orbitRadius,
     );
-    // Held orbs are positioned by interaction.js; released ones ease home.
-    if (!o.held) {
-      o.group.position.sub(o.knockApplied);
+    // Held orbs are positioned by interaction.js; loose ones fly; the rest orbit.
+    if (o.free) {
+      fly(o, dt);
+    } else if (!o.held) {
       if (o.returning) {
         o.group.position.lerp(o.orbitPos, 1 - Math.pow(0.02, dt));
         if (o.group.position.distanceTo(o.orbitPos) < 0.05) o.returning = false;
@@ -226,6 +302,7 @@ export function updateOrbs(orbs, lines, t, dt) {
     for (const ring of o.rings) ring.rotation.y += ring.userData.spin * dt;
     o.shell.visible = o.targeted || o.held;
   }
+  collide(orbs);
 
   for (const l of lines) {
     const p = l.line.geometry.attributes.position;
