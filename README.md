@@ -22,6 +22,7 @@ then open http://localhost:8000. (Opening `index.html` directly from disk won't 
 | WASD / mouse | Walk and look |
 | Click on an orb | Grab it; click again to release |
 | Mouse wheel (while holding) | Pull the orb closer or push it away |
+| F, → or swipe right (while holding) | Bring the orb's panel to the middle of the screen to read it; F, ← or swipe left goes back |
 | C | Toggle the overview camera |
 | P | Save a 1600×1200 `automation-map.png` |
 | Esc | Release the mouse |

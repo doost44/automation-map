@@ -40,3 +40,5 @@ body { font-family: "Courier New", Courier, monospace; color: #ffb43c; }
 #overlay p { margin: 6px 0; }
 #overlay .small { font-size: 11px; opacity: 0.75; }
 body.overview #crosshair, body.overview #target { display: none; }
+body.reading #crosshair { display: none; }
+body.reading #target { top: auto; bottom: 64px; }

@@ -15,10 +15,11 @@ Early-2000s PC shooter (Half-Life 1 era), not realism.
 - HUD: blocky monospace, amber on translucent dark boxes, centre crosshair.
 
 ## Scene
-- Player starts on a floating grass platform next to a white plastic lawn chair.
+- Player starts on a floating grass platform next to an old white metal folding chair with a red seat.
 - Each system in the log is an orb with rings of words. Orb size = times per day, glow = minutes per day, distance from the chair = how much control Charlie has (chosen-for-me orbs are far and fast).
 - Each orb has a terminal-style panel with its usage. Lines connect systems listed in `feedsInto`.
 - Click grabs an orb, mouse wheel pulls it in or pushes it away, click again releases.
+- While holding, F / right arrow / trackpad swipe right brings its panel to the middle of the view to read; F / left arrow / swipe left goes back.
 - C = overview camera, P = export a 1600x1200 PNG.
 
 ## Data

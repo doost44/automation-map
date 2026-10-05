@@ -63,8 +63,23 @@ export function dirtTexture() {
   return crunchy(c, 3);
 }
 
-export function plasticTexture() {
-  const { c } = noisy(32, [232, 230, 222], 14, 3);
+// Old white enamel, chipped down to dark metal and rust in places.
+export function paintTexture() {
+  const { c, g, r } = noisy(64, [226, 222, 206], 18, 3);
+  for (let i = 0; i < 26; i++) {
+    g.fillStyle = r() > 0.4 ? '#3a2e26' : '#8a5a34';
+    g.fillRect((r() * 64) | 0, (r() * 64) | 0, 1 + ((r() * 3) | 0), 1 + ((r() * 2) | 0));
+  }
+  return crunchy(c);
+}
+
+// Faded red vinyl seat.
+export function cushionTexture() {
+  const { c, g, r } = noisy(32, [178, 72, 58], 26, 5);
+  for (let i = 0; i < 10; i++) {
+    g.fillStyle = '#c98a72';
+    g.fillRect((r() * 32) | 0, (r() * 32) | 0, 2, 1);
+  }
   return crunchy(c);
 }
 

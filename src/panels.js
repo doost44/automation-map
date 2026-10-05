@@ -127,7 +127,7 @@ export function buildPanels(scene, orbs) {
     tether.frustumCulled = false;
     scene.add(tether);
 
-    const panel = { orb, mesh, tether, brightness: 0.4 };
+    const panel = { orb, mesh, tether, brightness: 0.4, read: 0 };
     orb.panel = panel;
     return panel;
   });
@@ -136,6 +136,9 @@ export function buildPanels(scene, orbs) {
 const _toCam = new THREE.Vector3();
 const _side = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
+const _dir = new THREE.Vector3();
+const _front = new THREE.Vector3();
+const READ_DIST = 4.6; // close enough that the 6 x 4.5 panel fills most of the view
 
 export function updatePanels(panels, camera, dt) {
   for (const p of panels) {
@@ -148,6 +151,15 @@ export function updatePanels(panels, camera, dt) {
       .addScaledVector(_side, o.radius + 4)
       .addScaledVector(UP, 1);
     p.mesh.lookAt(camera.position);
+
+    // Reading mode: glide to the middle of the view, square to the screen.
+    p.read += ((o.reading ? 1 : 0) - p.read) * Math.min(1, dt * 7);
+    if (p.read > 0.001) {
+      camera.getWorldDirection(_dir);
+      _front.copy(camera.position).addScaledVector(_dir, READ_DIST);
+      p.mesh.position.lerp(_front, p.read);
+      p.mesh.quaternion.slerp(camera.quaternion, p.read);
+    }
 
     const pos = p.tether.geometry.attributes.position;
     pos.setXYZ(0, ...o.group.position.toArray());

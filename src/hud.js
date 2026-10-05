@@ -20,9 +20,15 @@ export function showTotals(systems) {
 
 export function showTarget(orb, held) {
   const el = $('target');
-  if (!orb) return el.classList.add('hidden');
+  if (!orb) {
+    document.body.classList.remove('reading');
+    return el.classList.add('hidden');
+  }
   el.classList.remove('hidden');
-  el.textContent = held ? `HOLDING: ${orb.system.name} · WHEEL TO PULL · CLICK TO RELEASE` : orb.system.name;
+  document.body.classList.toggle('reading', !!orb.reading);
+  if (orb.reading) el.textContent = `READING: ${orb.system.name} · F / SWIPE LEFT FOR ORB · CLICK TO RELEASE`;
+  else if (held) el.textContent = `HOLDING: ${orb.system.name} · WHEEL TO PULL · F / SWIPE RIGHT TO READ · CLICK TO RELEASE`;
+  else el.textContent = orb.system.name;
 }
 
 export function showError(msg) {

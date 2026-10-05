@@ -1,51 +1,68 @@
 import * as THREE from 'three';
-import { plasticTexture } from './textures.js';
+import { paintTexture, cushionTexture } from './textures.js';
 
-// A white plastic lawn chair from boxes and cylinders. Front faces +Z.
+const UP = new THREE.Vector3(0, 1, 0);
+const LEAN = -0.46; // how far the back loop tilts back, in radians
+const LOOP = 1.0; // length of each front-leg/back-upright tube
+
+// An old white metal folding chair with a red seat. Front faces +Z.
 export function buildChair() {
-  const mat = new THREE.MeshLambertMaterial({ map: plasticTexture(), color: 0xf4f2ea, flatShading: true });
+  const paint = new THREE.MeshLambertMaterial({ map: paintTexture(), flatShading: true, side: THREE.DoubleSide });
+  const cushion = new THREE.MeshLambertMaterial({ map: cushionTexture(), flatShading: true });
+  const rubber = new THREE.MeshLambertMaterial({ color: 0x2a2620, flatShading: true });
   const chair = new THREE.Group();
 
-  const box = (w, h, d, x, y, z, rx = 0) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-    m.position.set(x, y, z);
-    m.rotation.x = rx;
-    chair.add(m);
-    return m;
+  // A 6-sided tube between two points.
+  const tube = (parent, a, b, r = 0.02) => {
+    const d = new THREE.Vector3().subVectors(b, a);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 6), paint);
+    m.position.copy(a).addScaledVector(d, 0.5);
+    m.quaternion.setFromUnitVectors(UP, d.normalize());
+    parent.add(m);
   };
-  const tube = (len, x, y, z, rx = 0, rz = 0) => {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, len, 6), mat);
-    m.position.set(x, y, z);
-    m.rotation.set(rx, 0, rz);
+  const foot = (x, z) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.05, 6), rubber);
+    m.position.set(x, 0.025, z);
     chair.add(m);
-    return m;
   };
+  const v = (x, y, z) => new THREE.Vector3(x, y, z);
 
-  // Slatted seat.
-  for (let i = 0; i < 5; i++) box(0.56, 0.04, 0.09, 0, 0.45, -0.22 + i * 0.11);
-  box(0.6, 0.05, 0.05, 0, 0.42, -0.26);
-  box(0.6, 0.05, 0.05, 0, 0.42, 0.26);
+  // Back loop: front legs that rise into the back uprights and a rounded top, tilted back.
+  const loop = new THREE.Group();
+  loop.position.z = 0.26;
+  loop.rotation.x = LEAN;
+  chair.add(loop);
+  for (const x of [-0.22, 0.22]) tube(loop, v(x, 0, 0), v(x, LOOP, 0));
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.02, 6, 8, Math.PI), paint);
+  arch.position.y = LOOP;
+  loop.add(arch);
 
-  // Slatted back, leaning back.
-  const lean = -0.22;
-  for (let i = 0; i < 5; i++) {
-    box(0.07, 0.62, 0.035, -0.22 + i * 0.11, 0.8, -0.34, lean);
-  }
-  box(0.6, 0.07, 0.05, 0, 1.1, -0.41, lean);
-  box(0.6, 0.05, 0.05, 0, 0.55, -0.29, lean);
+  // Curved backrest under the arch: a slice of an open cylinder, bowed away from the sitter.
+  const R = 0.6;
+  const span = 2 * Math.asin(0.22 / R);
+  const back = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.26, 4, 1, true, Math.PI - span / 2, span), paint);
+  back.position.set(0, LOOP - 0.08, R);
+  loop.add(back);
 
-  // Legs, splayed slightly.
-  tube(0.45, -0.27, 0.22, 0.24, 0.12, 0.08);
-  tube(0.45, 0.27, 0.22, 0.24, 0.12, -0.08);
-  tube(0.45, -0.27, 0.22, -0.27, -0.12, 0.08);
-  tube(0.45, 0.27, 0.22, -0.27, -0.12, -0.08);
+  // Rear legs: from the back feet up to the front of the seat, joined by a low brace.
+  for (const x of [-0.18, 0.18]) tube(chair, v(x, 0, -0.34), v(x, 0.42, 0.28));
+  tube(chair, v(-0.18, 0.12, -0.22), v(0.18, 0.12, -0.22), 0.014);
 
-  // Armrests and their front posts.
-  for (const x of [-0.33, 0.33]) {
-    box(0.07, 0.035, 0.6, x, 0.68, -0.02);
-    tube(0.24, x, 0.56, 0.25);
-  }
+  // Seat: painted tray with a red cushion.
+  const tray = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.05, 0.42), paint);
+  tray.position.set(0, 0.43, 0.1);
+  tray.rotation.x = 0.06;
+  chair.add(tray);
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.035, 0.36), cushion);
+  pad.position.set(0, 0.47, 0.1);
+  pad.rotation.x = 0.06;
+  chair.add(pad);
 
-  chair.scale.setScalar(1.25);
+  foot(-0.22, 0.26);
+  foot(0.22, 0.26);
+  foot(-0.18, -0.34);
+  foot(0.18, -0.34);
+
+  chair.scale.setScalar(1.3);
   return chair;
 }
