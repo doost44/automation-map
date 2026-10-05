@@ -24,7 +24,7 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ }
 }
 
-export function createOptions({ renderer, camera, controls, onOpen, onClose }) {
+export function createOptions({ renderer, camera, controls, onOpen, onClose, onResetOrbs }) {
   const menu = document.getElementById('options');
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -83,6 +83,7 @@ export function createOptions({ renderer, camera, controls, onOpen, onClose }) {
     },
   };
   $('opt-close').addEventListener('click', options.close);
+  $('opt-orbs').addEventListener('click', () => { onResetOrbs?.(); options.close(); });
 
   addEventListener('keydown', (e) => {
     if (e.code === 'Escape' && options.isOpen) options.close();

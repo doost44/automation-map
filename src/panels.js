@@ -19,7 +19,7 @@ function drawPanel(system, color) {
   g.lineWidth = 4;
   g.strokeRect(2, 2, W - 4, H - 4);
 
-  // Header bar.
+  // Header bar: name shrinks to fit beside the category.
   g.fillStyle = hex;
   g.fillRect(4, 4, W - 8, 40);
   g.fillStyle = '#111';
@@ -28,68 +28,90 @@ function drawPanel(system, color) {
   const cat = system.category.toUpperCase();
   const catW = g.measureText(cat).width;
   g.fillText(cat, W - 14 - catW, 25);
-  g.font = FONT(22);
-  g.fillText(fit(g, system.name.toUpperCase(), W - 50 - catW), 14, 25);
+  const name = system.name.toUpperCase();
+  const nameW = W - 44 - catW;
+  let size = 22;
+  do { g.font = FONT(size); } while (g.measureText(name).width > nameW && --size > 14);
+  g.fillText(fit(g, name, nameW), 14, 25);
 
   g.textBaseline = 'alphabetic';
   const label = (text, x, y) => {
     g.fillStyle = DIM;
-    g.font = FONT(14);
+    g.font = FONT(13);
     g.fillText(text, x, y);
+    return g.measureText(text).width;
   };
+  const usage = system.usage ?? {};
 
-  label('TIMES/DAY', 16, 70);
+  // Big numbers, with the usage exactly as logged underneath.
+  label('TIMES/DAY', 16, 64);
   g.fillStyle = WHITE;
-  g.font = FONT(60);
-  g.fillText(String(system.timesPerDay), 16, 126);
+  g.font = FONT(50);
+  g.fillText(String(system.timesPerDay), 16, 108);
+  wrap(g, usage.frequency ?? '', 16, 126, 170, 13, DIM, 3, 11);
 
-  label('MINUTES/DAY', 196, 70);
+  label('MINUTES/DAY', 196, 64);
   g.fillStyle = AMBER;
   g.font = FONT(40);
-  g.fillText(String(system.minutesPerDay), 196, 114);
+  g.fillText(String(system.minutesPerDay), 196, 104);
+  wrap(g, usage.duration ?? '', 196, 126, 148, 13, DIM, 3, 11);
 
-  label('CONTROL', 352, 70);
-  wrap(g, controlLabel(system.control).toUpperCase(), 352, 94, W - 368, 18, WHITE, 2);
+  label('CONTROL', 356, 64);
+  wrap(g, controlLabel(system.control).toUpperCase(), 356, 86, W - 372, 17, WHITE, 2, 15);
 
-  label('WHAT FOR', 16, 152);
-  wrap(g, system.whatFor ?? '', 16, 172, W - 32, 18, WHITE, 2);
+  label('WHAT FOR', 16, 178);
+  wrap(g, system.activity ?? system.whatFor ?? '', 16, 195, W - 32, 16, WHITE, 3, 14);
 
-  // Response bar: went along / pushed back / noticed.
-  const resp = system.response ?? {};
-  const parts = [
-    ['WENT ALONG', resp.wentAlong ?? 0, '#e0aa44'],
-    ['PUSHED BACK', resp.pushedBack ?? 0, '#e86048'],
-    ['NOTICED', resp.noticed ?? 0, '#5cb4dc'],
-  ];
-  const total = parts.reduce((s, p) => s + p[1], 0) || 1;
-  label('HOW I RESPONDED', 16, 220);
-  let x = 16;
-  for (const [, n, col] of parts) {
-    const w = ((W - 32) * n) / total;
-    g.fillStyle = col;
-    g.fillRect(x, 228, w, 16);
-    x += w;
-  }
-  g.font = FONT(13);
-  let lx = 16;
-  for (const [name, n, col] of parts) {
-    g.fillStyle = col;
-    const t = `${name} ${n}`;
-    g.fillText(t, lx, 262);
-    lx += g.measureText(t).width + 18;
+  if (system.decides) {
+    label('IT DECIDES:', 16, 250);
+    wrap(g, system.decides, 16, 267, W - 32, 16, AMBER, 3, 14);
+  } else if (system.response) {
+    responseBar(g, system.response, 250);
   }
 
-  label('KEPT FOR MYSELF', 16, 288);
-  wrap(g, system.keptForMyself ?? '', 16, 306, W - 32, 18, WHITE, 1);
+  if (system.keptForMyself) {
+    const w = label('KEPT FOR MYSELF:', 16, 322);
+    wrap(g, system.keptForMyself, 24 + w, 322, W - 40 - w, 16, WHITE, 1, 14);
+  } else if (system.group) {
+    const w = label('GROUP:', 16, 322);
+    wrap(g, system.group, 24 + w, 322, W - 40 - w, 16, WHITE, 1, 14);
+  }
 
-  label('LOG', 16, 330);
-  wrap(g, system.notes ?? '', 16, 348, W - 32, 18, AMBER, 2, 15);
+  label('LOG', 16, 342);
+  wrap(g, system.notes ?? '', 16, 358, W - 32, 16, AMBER, 2, 14);
 
   // Scanlines.
   g.fillStyle = 'rgba(0,0,0,0.2)';
   for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1);
 
   return crunchy(c);
+}
+
+// The old went along / pushed back / noticed bar, for logs that counted responses.
+function responseBar(g, resp, y) {
+  const parts = [
+    ['WENT ALONG', resp.wentAlong ?? 0, '#e0aa44'],
+    ['PUSHED BACK', resp.pushedBack ?? 0, '#e86048'],
+    ['NOTICED', resp.noticed ?? 0, '#5cb4dc'],
+  ];
+  const total = parts.reduce((s, p) => s + p[1], 0) || 1;
+  g.fillStyle = DIM;
+  g.font = FONT(13);
+  g.fillText('HOW I RESPONDED', 16, y);
+  let x = 16;
+  for (const [, n, col] of parts) {
+    const w = ((W - 32) * n) / total;
+    g.fillStyle = col;
+    g.fillRect(x, y + 8, w, 16);
+    x += w;
+  }
+  let lx = 16;
+  for (const [name, n, col] of parts) {
+    g.fillStyle = col;
+    const t = `${name} ${n}`;
+    g.fillText(t, lx, y + 42);
+    lx += g.measureText(t).width + 18;
+  }
 }
 
 // Shorten text with an ellipsis until it fits.

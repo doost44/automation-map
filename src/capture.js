@@ -1,5 +1,5 @@
 import { CATEGORY_COLORS } from './orbs.js';
-import { totals } from './hud.js';
+import { totals, screenTime } from './hud.js';
 
 export const PHOTO_W = 1600, PHOTO_H = 1200;
 
@@ -61,12 +61,14 @@ function text(g, s, x, y, size, color = AMBER) {
 
 function drawOverlay(g, data) {
   const t = totals(data.systems);
+  const logged = screenTime(data);
 
   // Title block.
-  box(g, 40, 40, 620, 150);
+  box(g, 40, 40, 620, logged ? 182 : 150);
   text(g, 'AUTOMATION MAP', 64, 104, 54);
-  text(g, `${data.owner.toUpperCase()} · ${data.logDays}-DAY FIELD LOG`, 66, 142, 22, WHITE);
+  text(g, `${data.owner.toUpperCase()} · ${data.logDays}-DAY FIELD LOG · ${data.systems.length} APPS`, 66, 142, 22, WHITE);
   text(g, `${t.decisions} DECISIONS/DAY · ${t.minutes} MIN/DAY`, 66, 172, 22, WHITE);
+  if (logged) text(g, `${logged.toUpperCase()} SCREEN TIME LOGGED`, 66, 204, 22, WHITE);
 
   // Legend.
   const cats = [...new Set(data.systems.map((s) => s.category))];

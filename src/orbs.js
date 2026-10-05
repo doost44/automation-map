@@ -11,8 +11,12 @@ export const CATEGORY_COLORS = {
   autocomplete: 0xb06ad8,
   'ai-tool': 0x3ad6b8,
   navigation: 0xd8d24a,
+  search: 0x6c7cf4,
+  notification: 0xf06aa8,
   other: 0x9a9a9a,
 };
+
+const MIN_AIM = 1.4; // smallest aim/grab sphere, so tiny orbs are still easy to click
 
 const CONTROL_LABELS = {
   'chosen-for-me': 'chosen for me',
@@ -33,7 +37,7 @@ export function buildOrbs(scene, systems) {
 
     const group = new THREE.Group();
     // Invisible sphere that grabs, aiming and rock hits test against.
-    const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(radius, 1), new THREE.MeshBasicMaterial({ visible: false }));
+    const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(Math.max(radius, MIN_AIM), 1), new THREE.MeshBasicMaterial({ visible: false }));
     group.add(mesh);
 
     // The logo itself, glowing by minutes per day.
@@ -122,6 +126,8 @@ export function buildOrbs(scene, systems) {
     orbs.push(orb);
   });
 
+  spreadOut(orbs);
+  for (const o of orbs) o.home = { angle: o.angle, orbitRadius: o.orbitRadius, orbitSpeed: o.orbitSpeed, height: o.height };
   const lines = buildConnections(scene, orbs);
   return { orbs, lines };
 }
@@ -138,6 +144,17 @@ function makeFree(o) {
   o.returning = false;
   const r = o.orbitRadius;
   o.vel.set(-Math.sin(o.angle) * r, 0, Math.cos(o.angle) * r).multiplyScalar(o.orbitSpeed);
+}
+
+// Send every orb back to its original, evenly spaced orbit (they glide there).
+export function resetOrbits(orbs) {
+  for (const o of orbs) {
+    if (o.held) continue;
+    Object.assign(o, o.home);
+    o.free = false;
+    o.vel.set(0, 0, 0);
+    o.returning = true;
+  }
 }
 
 // Pick up orbiting again from wherever the orb is now, at its usual speed.
@@ -239,6 +256,24 @@ function updateHit(o, t, dt) {
       m.emissive.copy(m.userData.glow.color).lerp(WHITE, o.flash);
       m.emissiveIntensity = m.userData.glow.intensity + o.flash * 1.5;
     }
+  }
+}
+
+// Lift orbs whose starting spots overlap until every pair is clear.
+function spreadOut(orbs) {
+  const start = (o) => new THREE.Vector3(
+    Math.cos(o.angle) * o.orbitRadius, o.height + Math.sin(o.bobPhase) * 0.5, Math.sin(o.angle) * o.orbitRadius,
+  );
+  for (let pass = 0; pass < 50; pass++) {
+    let moved = false;
+    for (let i = 0; i < orbs.length; i++) {
+      for (let j = i + 1; j < orbs.length; j++) {
+        const a = orbs[i], b = orbs[j];
+        const gap = start(a).distanceTo(start(b)) - (a.radius + b.radius) * SIZE - 1;
+        if (gap < 0) { b.height += -gap + 0.5; moved = true; }
+      }
+    }
+    if (!moved) break;
   }
 }
 

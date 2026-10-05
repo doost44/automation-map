@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { buildWorld } from './world.js';
 import { buildChair } from './chair.js';
-import { buildOrbs, updateOrbs } from './orbs.js';
+import { buildOrbs, updateOrbs, resetOrbits } from './orbs.js';
 import { buildPanels, updatePanels } from './panels.js';
 import { createInteraction } from './interaction.js';
 import { createRocks } from './rocks.js';
@@ -48,6 +48,7 @@ const options = createOptions({
   renderer, camera, controls,
   onOpen: () => overlay.classList.add('hidden'),
   onClose: () => { if (!overview.on) overlay.classList.remove('hidden'); },
+  onResetOrbs: () => resetOrbs(),
 });
 document.getElementById('options-button').addEventListener('click', (e) => {
   e.stopPropagation(); // don't also enter the game
@@ -58,6 +59,7 @@ const keys = {};
 addEventListener('keydown', (e) => { keys[e.code] = true; });
 addEventListener('keyup', (e) => { keys[e.code] = false; });
 const player = createPlayer(camera, controls, keys);
+player.chair = chair;
 
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight, false);
@@ -97,17 +99,25 @@ try {
   doom = createDoom(scene, camera, rocks, player);
   player.orbs = orbs;
   setSubtitle(data);
-  showTotals(data.systems);
+  showTotals(data);
 } catch (err) {
   showError(`Could not load data/log.json: ${err.message}`);
 }
 
 addEventListener('keydown', (e) => {
   if (e.code === 'KeyC') toggleOverview();
+  if (e.code === 'KeyR') resetOrbs();
+  if (e.code === 'KeyE') player.toggleSit();
   if (e.code === 'KeyP' && data) {
     capturePNG({ renderer, scene, camera, data, beforeRender: () => updatePanels(panels, camera, 1) });
   }
 });
+
+// R or the options button: drop anything held, then every orb glides back to its original orbit.
+function resetOrbs() {
+  interaction?.release();
+  resetOrbits(orbs);
+}
 
 const clock = new THREE.Clock();
 

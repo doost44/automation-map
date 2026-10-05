@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PLATFORM_RADIUS } from './world.js';
+import { showHint } from './hud.js';
 
 export const EYE = 1.7;
 export const START = new THREE.Vector3(1.4, EYE, 1.2);
@@ -14,6 +15,10 @@ const DIP_TIME = 0.4;
 const JUMP = 7.5; // upward speed of a jump (about 1.4 units high)
 const AIR_CONTROL = 5; // how quickly WASD steers you in the air
 const BODY = 0.35; // player radius, for bumping into orbs
+const SIT_REACH = 3; // how close the crosshair must be to the chair to sit
+const SIT_TIME = 0.6;
+const SEATED_EYE = new THREE.Vector3(0, 0.8, 0); // eye height above the seat
+const CHAIR_RADIUS = 0.6; // the chair is solid within this distance of its centre
 
 // Walking, falling off the edge, and coming back without a cut: below the
 // fog line the player is moved to the same height above the island and keeps
@@ -28,6 +33,9 @@ export function createPlayer(camera, controls, keys) {
     grounded: true,
     on: null, // the orb being stood on, if any
     orbs: [], // set by main.js once the orbs exist
+    chair: null, // set by main.js
+    seated: false,
+    standing: false, // easing back up out of the chair
     wrapped: false, // falling back in from above
     depth: WRAP, // how far to fall before wrapping (the giant rock makes it longer)
     onWrap: null, // called at the moment of the wrap, while nothing is visible
@@ -41,6 +49,9 @@ export function createPlayer(camera, controls, keys) {
     vel.y = up;
     player.grounded = false;
     player.on = null;
+    player.seated = false;
+    player.standing = false;
+    sitT = 1;
     stunned = 1.5;
   }
 
@@ -73,8 +84,15 @@ export function createPlayer(camera, controls, keys) {
     return c.y + Math.sqrt(o.radius ** 2 - h * h) + EYE;
   }
 
-  // Orbs are solid: walking or flying into one pushes you round it.
+  // Orbs (and the chair) are solid: walking or flying into one pushes you round it.
   function bump(p) {
+    const chair = player.chair?.position;
+    if (chair && p.y - EYE < 1.2) {
+      const dx = p.x - chair.x, dz = p.z - chair.z;
+      const d = Math.hypot(dx, dz);
+      const min = CHAIR_RADIUS + BODY;
+      if (d < min && d > 1e-3) { p.x += (dx / d) * (min - d); p.z += (dz / d) * (min - d); }
+    }
     for (const o of player.orbs) {
       if (o === player.on || o.held) continue;
       const c = o.group.position;
@@ -90,6 +108,66 @@ export function createPlayer(camera, controls, keys) {
       p.x += dx * out;
       p.z += dz * out;
     }
+  }
+
+  // --- Sitting in the chair ---------------------------------------------------
+  const ray = new THREE.Raycaster();
+  const CENTER = new THREE.Vector2(0, 0);
+  const sitFrom = new THREE.Vector3();
+  const sitTo = new THREE.Vector3();
+  const quatFrom = new THREE.Quaternion();
+  const quatTo = new THREE.Quaternion();
+  let sitT = 1; // 0..1 progress of easing into or out of the seat
+
+  // Crosshair on the chair, close enough, standing on the ground.
+  function lookingAtChair() {
+    if (!player.chair || !player.grounded || player.on || !controls.isLocked) return false;
+    camera.updateMatrixWorld(); // the camera may have just moved this frame
+    ray.setFromCamera(CENTER, camera);
+    ray.far = SIT_REACH;
+    return ray.intersectObject(player.chair, true).length > 0;
+  }
+
+  function startMove(to, faceChairForward) {
+    sitFrom.copy(camera.position);
+    sitTo.copy(to);
+    quatFrom.copy(camera.quaternion);
+    if (faceChairForward) quatTo.setFromEuler(new THREE.Euler(0, player.chair.rotation.y + Math.PI, 0, 'YXZ'));
+    else quatTo.copy(camera.quaternion);
+    sitT = 0;
+  }
+
+  player.toggleSit = () => {
+    if (player.seated) return standUp();
+    if (!lookingAtChair()) return;
+    player.seated = true;
+    vel.set(0, 0, 0);
+    startMove(player.chair.localToWorld(new THREE.Vector3(0, 0.47, 0.02)).add(SEATED_EYE), true);
+  };
+
+  function standUp() {
+    player.seated = false;
+    player.standing = true;
+    const spot = player.chair.localToWorld(new THREE.Vector3(0, 0, 1.0));
+    spot.y = EYE;
+    startMove(spot, false);
+  }
+
+  // Ease the camera into or out of the seat. Returns true while it is busy.
+  function updateSit(dt) {
+    if (sitT < 1) {
+      sitT = Math.min(1, sitT + dt / SIT_TIME);
+      const k = sitT * sitT * (3 - 2 * sitT); // smoothstep
+      camera.position.lerpVectors(sitFrom, sitTo, k);
+      if (player.seated) camera.quaternion.slerpQuaternions(quatFrom, quatTo, k);
+      if (sitT === 1 && player.standing) player.standing = false;
+      return true;
+    }
+    if (!player.seated) return false;
+    camera.position.copy(sitTo);
+    // Any movement key stands you up.
+    if (controls.isLocked && (keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD || keys.Space)) standUp();
+    return true;
   }
 
   // WASD as a direction on the ground plane, relative to where the camera faces.
@@ -108,6 +186,8 @@ export function createPlayer(camera, controls, keys) {
   }
 
   function update(dt) {
+    if (updateSit(dt)) return showHint(player.seated ? 'SEATED · E, WASD OR SPACE TO STAND' : null, 'chair');
+    showHint(lookingAtChair() ? 'CHAIR · E TO SIT' : null, 'chair');
     const p = camera.position;
     const wish = wishDir();
 
