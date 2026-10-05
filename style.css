@@ -28,7 +28,7 @@ body { font-family: "Courier New", Courier, monospace; color: #ffb43c; }
 #target { position: absolute; left: 50%; top: calc(50% + 24px); transform: translateX(-50%); font-size: 13px; white-space: nowrap; }
 #totals { position: absolute; left: 16px; bottom: 16px; font-size: 13px; line-height: 1.5; }
 #totals b { font-size: 20px; color: #fff2d0; }
-#help { position: absolute; right: 16px; bottom: 16px; font-size: 11px; opacity: 0.8; }
+#help { position: absolute; right: 16px; bottom: 16px; max-width: calc(100% - 380px); text-align: right; font-size: 11px; opacity: 0.8; }
 #error { position: absolute; top: 16px; right: 16px; color: #ff6040; max-width: 420px; }
 
 #overlay {
@@ -42,3 +42,9 @@ body { font-family: "Courier New", Courier, monospace; color: #ffb43c; }
 body.overview #crosshair, body.overview #target { display: none; }
 body.reading #crosshair { display: none; }
 body.reading #target { top: auto; bottom: 64px; }
+#hint { position: absolute; right: 16px; bottom: 76px; font-size: 12px; }
+body.overview #hint { display: none; }
+/* Reading mode: same size and place as the 3D panel at its reading distance (70% of the view height). */
+#reader { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0; transition: opacity 0.15s; }
+#reader.on { opacity: 1; }
+#reader canvas { display: block; height: 70vh; width: auto; max-width: 94vw; object-fit: contain; image-rendering: pixelated; }

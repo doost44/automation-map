@@ -20,12 +20,15 @@ then open http://localhost:8000. (Opening `index.html` directly from disk won't 
 | --- | --- |
 | Click | Enter (locks the mouse) |
 | WASD / mouse | Walk and look |
-| Click on an orb | Grab it; click again to release |
+| Click on an orb | Grab it; click again to drop it there (it stays where you leave it until you reload) |
 | Mouse wheel (while holding) | Pull the orb closer or push it away |
+| Right click or G (near a rock) | Pick up any rock or pebble; right click or G again throws it at the crosshair. Hit an orb to knock it away, hit a panel to crack its screen. Rocks thrown off the island are gone until you reload |
 | F, → or swipe right (while holding) | Bring the orb's panel to the middle of the screen to read it; F, ← or swipe left goes back |
 | C | Toggle the overview camera |
 | P | Save a 1600×1200 `automation-map.png` |
 | Esc | Release the mouse |
+
+You can walk off the edge: you fall through the void, then come back down onto the island from the sky. Throw every rock off and see what happens.
 
 For the submission still: press **C**, then **P**.
 
@@ -37,6 +40,7 @@ Everything comes from `data/log.json`. Each entry in `systems`:
 | --- | --- | --- |
 | `id` | short unique id | used by `feedsInto` |
 | `name` | display name | panel header, HUD |
+| `logo` | `youtube`, `netflix`, `spotify`, `instagram`, `google`, `keycap`, `uber`, `gmail`, `maps-pin`, `ai-spark` (anything else gets a plain faceted planet) | the 3D logo at the centre of the orb |
 | `category` | `feed`, `recommendation`, `pricing`, `moderation`, `autocomplete`, `ai-tool`, `navigation`, `other` | orb colour |
 | `control` | `chosen-for-me`, `chosen-by-me`, `delegated` | orbit distance and speed |
 | `timesPerDay` | how often it acted | orb size |

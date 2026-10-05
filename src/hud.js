@@ -31,6 +31,19 @@ export function showTarget(orb, held) {
   else el.textContent = orb.system.name;
 }
 
+// The panel being read, as a sharp 2D copy over the 3D view (null hides it).
+export function showReader(panelCanvas) {
+  const el = $('reader');
+  if (panelCanvas && el.firstChild !== panelCanvas) el.replaceChildren(panelCanvas);
+  el.classList.toggle('on', !!panelCanvas);
+}
+
+export function showHint(text) {
+  const el = $('hint');
+  el.classList.toggle('hidden', !text);
+  if (text) el.textContent = text;
+}
+
 export function showError(msg) {
   const el = $('error');
   el.textContent = msg;

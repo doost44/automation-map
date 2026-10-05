@@ -48,9 +48,8 @@ export function buildWorld(scene) {
   underside.position.y = -0.6 - 4.5;
   platform.add(underside);
 
-  // Grass tufts and pebbles.
+  // Grass tufts. (The pebbles are throwable, see rocks.js.)
   const tuftMat = new THREE.MeshLambertMaterial({ color: 0x5f7d34, flatShading: true });
-  const pebbleMat = new THREE.MeshLambertMaterial({ color: 0x8a8378, flatShading: true });
   for (let i = 0; i < 40; i++) {
     const a = r() * Math.PI * 2;
     const d = 1.5 + r() * (PLATFORM_RADIUS - 2);
@@ -58,13 +57,6 @@ export function buildWorld(scene) {
     tuft.position.set(Math.cos(a) * d, 0.15, Math.sin(a) * d);
     tuft.rotation.z = (r() - 0.5) * 0.5;
     platform.add(tuft);
-  }
-  for (let i = 0; i < 12; i++) {
-    const a = r() * Math.PI * 2;
-    const d = 2 + r() * (PLATFORM_RADIUS - 3);
-    const pebble = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12 + r() * 0.15, 0), pebbleMat);
-    pebble.position.set(Math.cos(a) * d, 0.05, Math.sin(a) * d);
-    platform.add(pebble);
   }
 
   scene.add(platform);

@@ -82,11 +82,19 @@ export function createInteraction(camera, controls, orbs, panels) {
     showTarget(state.held ?? aimed, !!state.held);
   }
 
+  // Let go: the drop point becomes the orb's new home and it stops orbiting, so it
+  // stays where it was put (still spinning and bobbing). returning smooths the bob offset.
   function release() {
-    if (!state.held) return;
-    state.held.held = false;
-    state.held.reading = false;
-    state.held.returning = true;
+    const o = state.held;
+    if (!o) return;
+    const p = o.group.position;
+    o.orbitRadius = Math.hypot(p.x, p.z);
+    o.angle = Math.atan2(p.z, p.x);
+    o.height = p.y;
+    o.orbitSpeed = 0;
+    o.held = false;
+    o.reading = false;
+    o.returning = true;
     state.held = null;
   }
 

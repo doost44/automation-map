@@ -1,16 +1,16 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
-import { buildWorld, PLATFORM_RADIUS } from './world.js';
+import { buildWorld } from './world.js';
 import { buildChair } from './chair.js';
 import { buildOrbs, updateOrbs } from './orbs.js';
 import { buildPanels, updatePanels } from './panels.js';
 import { createInteraction } from './interaction.js';
+import { createRocks } from './rocks.js';
+import { createPlayer, START } from './player.js';
+import { createDoom } from './doom.js';
 import { setSubtitle, showTotals, showError } from './hud.js';
 import { capturePNG } from './capture.js';
 
-const EYE = 1.7;
-const SPEED = 4.5;
-const START = new THREE.Vector3(1.4, EYE, 1.2);
 const OVERVIEW = new THREE.Vector3(38, 22, 42);
 
 const canvas = document.getElementById('view');
@@ -41,6 +41,7 @@ controls.addEventListener('unlock', () => {
 const keys = {};
 addEventListener('keydown', (e) => { keys[e.code] = true; });
 addEventListener('keyup', (e) => { keys[e.code] = false; });
+const player = createPlayer(camera, controls, keys);
 
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight, false);
@@ -67,7 +68,7 @@ function toggleOverview() {
   }
 }
 
-let orbs = [], lines = [], panels = [], interaction = null, data = null;
+let orbs = [], lines = [], panels = [], interaction = null, rocks = null, doom = null, data = null;
 
 try {
   const res = await fetch('data/log.json');
@@ -76,6 +77,8 @@ try {
   ({ orbs, lines } = buildOrbs(scene, data.systems));
   panels = buildPanels(scene, orbs);
   interaction = createInteraction(camera, controls, orbs, panels);
+  rocks = createRocks(scene, camera, controls, orbs, panels);
+  doom = createDoom(scene, camera, rocks, player);
   setSubtitle(data);
   showTotals(data.systems);
 } catch (err) {
@@ -90,37 +93,18 @@ addEventListener('keydown', (e) => {
 });
 
 const clock = new THREE.Clock();
-const move = new THREE.Vector3();
-
-function walk(dt) {
-  if (!controls.isLocked) return;
-  move.set(
-    (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0),
-    0,
-    (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0),
-  );
-  if (move.lengthSq() === 0) return;
-  move.normalize().multiplyScalar(SPEED * dt);
-  controls.moveRight(move.x);
-  controls.moveForward(move.z);
-
-  // Stay on the platform.
-  const p = camera.position;
-  const d = Math.hypot(p.x, p.z);
-  const max = PLATFORM_RADIUS - 0.6;
-  if (d > max) { p.x *= max / d; p.z *= max / d; }
-  p.y = EYE;
-}
 
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   const t = clock.elapsedTime;
-  walk(dt);
+  if (!overview.on) player.update(dt);
   updateOrbs(orbs, lines, t, dt);
   interaction?.update(dt);
   updatePanels(panels, camera, dt);
+  rocks?.update(dt);
+  doom?.update(dt, t);
   renderer.render(scene, camera);
 });
 
 // Handy for debugging in the browser console.
-window.automationMap = { scene, camera, orbs, toggleOverview };
+window.automationMap = { scene, camera, orbs, panels, rocks, player, doom, toggleOverview };
